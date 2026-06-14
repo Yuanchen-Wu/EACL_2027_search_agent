@@ -127,68 +127,43 @@ Useful flags: `--variant` (one of the five), `--persona_id` (from
 `experiments/sample_personas.jsonl`, optional), `--max_results_per_branch`,
 `--model`, `--no_log`.
 
-## Run the batch ablation
+## Reproducing the EACL 2027 Evaluation
 
+To reproduce the full evaluation pipeline and generate the final visualizations, follow these steps sequentially:
+
+### 1. Generate Synthetic Data
+First, generate the synthetic user personas and their corresponding ambiguous search queries:
 ```bash
-python experiments/run_batch.py
+.venv/bin/python experiments/synthetic_data/generate_synthetic_data.py
 ```
+This populates the `experiments/synthetic_data/generated/` folder with profiles and queries designed specifically to test personalization boundaries.
 
-Reads `experiments/sample_queries.jsonl` (5 queries) and
-`experiments/sample_personas.jsonl` (3 personas) and runs the variants.
-
-By default it runs in **deduplicated** mode: the non-personalized variants
-(`V0`, `V1`) run once per query, and the personalized variants (`V2`, `V3`,
-`V4`) run once per (query, persona) pair. Pass `--full-grid` for a strict
-factorial design (every variant for every pair). Use `--limit N` for a quick
-smoke test.
-
-## Interpreting the logs
-
-Each line in `outputs/runs.jsonl` is one run:
-
-```json
-{
-  "run_id": "...",
-  "timestamp": "2026-...Z",
-  "variant": "V4_mixed_fanout",
-  "user_query": "...",
-  "persona_id": "ml_phd_budget",
-  "persona": { "...": "..." },
-  "fanout_branches": [
-    {"branch_type": "personalized", "query": "...", "rationale": "...",
-     "used_persona_fields": ["budget", "expertise"]}
-  ],
-  "raw_search_results": [
-    {"title": "...", "url": "...", "content": "...", "score": 0.91,
-     "rank": 1, "branch_type": "personalized", "branch_query": "...",
-     "is_duplicate_url": false}
-  ],
-  "final_answer": "...",
-  "cost_proxy": {
-    "num_gemini_calls": 2,
-    "num_tavily_calls": 7,
-    "num_fanout_branches": 7,
-    "num_raw_results": 31
-  }
-}
-```
-
-Suggested analyses:
-
-- **Fan-out inspection:** compare branch types/queries across V1 vs V3 vs V4 to
-  see how persona conditioning changes retrieval.
-- **Evidence overlap:** group `raw_search_results` by `branch_type` /
-  `branch_query`; `is_duplicate_url` flags URLs seen in an earlier branch.
-- **Answer comparison:** read `final_answer` across V0–V4 for the same query to
-  judge where personalization actually changes the output.
-- **Cost vs. benefit:** `cost_proxy` gives a transparent proxy for the work each
-  variant did (Gemini + Tavily calls, branch and result counts).
-
-A quick way to scan results:
-
+### 2. Run the Benchmark
+Execute all five agent variants (`V0` through `V4`) against the generated queries:
 ```bash
-python -c "import json;[print(j['variant'], j['cost_proxy']) for j in map(json.loads, open('outputs/runs.jsonl'))]"
+.venv/bin/python experiments/run_generated_benchmark.py
 ```
+*(Tip: Use `--limit N` to run a smaller subset for quick testing)*
+This orchestrates the full pipeline and saves the raw search trajectories and final answers to `outputs/generated_benchmark_runs.jsonl`.
+
+### 3. Run the LLM Judge
+Evaluate the final answers using our pointwise LLM-as-a-judge:
+```bash
+.venv/bin/python experiments/evaluation/evaluate_final_responses.py
+```
+This critically scores each answer on Intent Satisfaction, Personalization Target Use, Overpersonalization, Specificity, and Safety, saving the raw scores to `experiments/evaluation/generated/final_response_scores.jsonl`.
+
+### 4. Summarize Results
+Aggregate the raw scores into clean CSVs and Markdown tables:
+```bash
+.venv/bin/python experiments/evaluation/summarize_eval_results.py
+```
+
+### 5. Visualize the Findings
+Finally, open the provided Jupyter Notebook to view the performance charts and our final conclusions:
+- Open `analysis.ipynb` in your preferred Jupyter environment.
+- Run all cells.
+- The notebook will automatically load the generated CSVs and render clean, publication-ready visualizations comparing the architectural variants.
 
 ## Notes & limitations
 

@@ -12,7 +12,7 @@ from typing import Any, Dict, List, Optional
 
 # Branch types used throughout the fan-out logic. Kept as a simple tuple so it
 # is trivial to validate against and to extend later.
-BRANCH_TYPES = ("generic", "personalized", "constraint", "disconfirming")
+BRANCH_TYPES = ("generic", "personalized")
 
 # Variant identifiers. Centralized here so the CLI, batch runner, and fan-out
 # logic all agree on the canonical names.

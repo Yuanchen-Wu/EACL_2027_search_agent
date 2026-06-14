@@ -26,8 +26,6 @@ NUM_PERSONALIZED_BRANCHES = 4
 MIXED_BRANCH_PLAN = {
     "generic": 2,
     "personalized": 2,
-    "constraint": 2,
-    "disconfirming": 1,
 }
 
 
@@ -207,22 +205,17 @@ Return ONLY the JSON array, no prose."""
 def _generate_mixed(
     user_query: str, persona: Optional[Persona], model: str
 ) -> List[FanoutBranch]:
-    """Generate the four mixed branch types for variant V4."""
+    """Generate mixed branch types for variant V4."""
     plan_desc = ", ".join(
         f"{count} {btype}" for btype, count in MIXED_BRANCH_PLAN.items()
     )
     prompt = f"""You are an advanced search query planner. Produce a MIXED set of
-web search queries across four branch types to thoroughly and fairly answer a
+web search queries across two branch types to thoroughly and fairly answer a
 user's question for a specific persona.
 
 Branch types:
   - "generic": broad, neutral evidence about the topic (ignore the persona).
   - "personalized": tailored to the persona's specific needs/preferences.
-  - "constraint": target HARD constraints such as budget, location, risk,
-    time, device, or domain implied by the persona or question.
-  - "disconfirming": deliberately seek evidence that could CHALLENGE or
-    contradict the likely personalized recommendation (counter-evidence,
-    downsides, risks, alternatives).
 
 Aim for roughly: {plan_desc}.
 
@@ -232,7 +225,7 @@ Persona:
 {_persona_block(persona)}
 
 Return STRICT JSON: a list of objects, each with fields:
-  "branch_type": one of "generic" | "personalized" | "constraint" | "disconfirming",
+  "branch_type": one of "generic" | "personalized",
   "query": the search query string,
   "rationale": one short sentence,
   "used_persona_fields": list of persona fields used (empty list for generic).
