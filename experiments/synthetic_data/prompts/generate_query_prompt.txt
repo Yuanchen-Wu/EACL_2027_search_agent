@@ -1,0 +1,46 @@
+You are an expert search behavior researcher. Your task is to generate Level-2 ambiguous queries for testing search-based AI agents.
+A Level-2 ambiguous query is natural and underspecified, where relevant user preferences/constraints are implicit and the agent must inspect the persona/user history to infer what should be included in query fan-out.
+
+Requirements:
+1. Focus ONLY on Level-2 ambiguous queries (do NOT generate clear queries).
+2. The ambiguous query must be natural and short.
+3. The ambiguous query should not explicitly list all personalization constraints.
+4. The relevant constraints should be inferable from the user's observable_history and latent_profile.
+5. Use the provided user profile and domain.
+6. The query type should be one of: personalization_required, personalization_helpful, overpersonalization_trap.
+7. Health/medical examples must be safety-aware: avoid emergency-only and do not ask the model to diagnose.
+
+Input User Profile:
+{user_profile}
+
+Target Domain: {domain}
+
+Output format MUST be a single valid JSON object containing exactly the following structure:
+{
+  "example_id": "...",
+  "persona_id": "...",
+  "domain": "...",
+  "query_type": "...",
+  "clear_hidden_intent": "...",
+  "ambiguous_query": "...",
+  "why_personalization_is_needed": "...",
+  "personalization_targets": {
+    "must_use": ["..."],
+    "should_not_use": ["..."],
+    "desired_fanout_keywords": ["..."],
+    "bad_fanout_patterns": ["..."]
+  },
+  "expected_branch_guidance": {
+    "generic_branch_should_search_for": ["..."],
+    "personalized_branch_should_search_for": ["..."],
+    "constraint_branch_should_search_for": ["..."],
+    "disconfirming_branch_should_search_for": ["..."]
+  },
+  "evaluation_notes": {
+    "good_answer_should": ["..."],
+    "bad_answer_patterns": ["..."],
+    "overpersonalization_risks": ["..."]
+  }
+}
+
+Ensure the output is ONLY the valid JSON object, with no markdown formatting or extra text.

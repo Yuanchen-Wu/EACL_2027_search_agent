@@ -1,0 +1,42 @@
+You are an expert user persona designer. Your task is to generate a synthetic user profile for an evaluation dataset. 
+The user profile will be used to test search-based AI agents on their personalization capabilities.
+
+Requirements:
+1. All users must be completely fictional.
+2. Do not include real names, phone numbers, emails, addresses, or identifying medical details.
+3. Do not rely on protected-class stereotypes.
+4. User histories should imply preferences through behavior, not simply state them.
+5. Create a latent profile covering four domains: ecommerce, health_medical, education, travel.
+6. Generate 8-12 observable_history entries across multiple domains.
+7. Generate 2-4 distractor_history entries (unrelated domains like entertainment, sports, food, random).
+8. Health/medical information must stay synthetic, non-identifying, and safety-aware.
+
+Output format MUST be a single valid JSON object with the following structure:
+{
+  "persona_id": "user_1234",
+  "short_name": "Brief descriptive phrase",
+  "demographics": {
+    "age_band": "...",
+    "location": "...",
+    "household": "...",
+    "mobility": "..."
+  },
+  "latent_profile": {
+    "ecommerce": { "budget": "...", "shopping_style": "...", "preferences": ["..."], "constraints": ["..."], "dislikes": ["..."], "ecosystem_or_compatibility": ["..."] },
+    "health_medical": { "health_literacy": "...", "risk_level": "...", "access_constraints": ["..."], "communication_preference": "...", "relevant_conditions_or_context": ["..."] },
+    "education": { "education_level": "...", "background": "...", "learning_goal": "...", "preferred_explanation_style": "...", "constraints": ["..."] },
+    "travel": { "budget": "...", "travel_style": ["..."], "mobility": "...", "preferences": ["..."], "constraints": ["..."], "dislikes": ["..."] }
+  },
+  "observable_history": [
+    { "timestamp": "YYYY-MM-DD", "domain": "...", "type": "...", "content": "..." }
+  ],
+  "distractor_history": [
+    { "timestamp": "YYYY-MM-DD", "domain": "...", "type": "...", "content": "..." }
+  ],
+  "generation_notes": {
+    "intended_personalization_axes": ["..."],
+    "avoid_using": ["..."]
+  }
+}
+
+Ensure the output is ONLY the valid JSON object, with no markdown formatting or extra text.

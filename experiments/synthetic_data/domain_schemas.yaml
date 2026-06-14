@@ -1,0 +1,63 @@
+domains:
+  - ecommerce
+  - health_medical
+  - education
+  - travel
+
+query_types:
+  - personalization_required
+  - personalization_helpful
+  - overpersonalization_trap
+
+ecommerce:
+  personalization_axes:
+    - budget
+    - compatibility
+    - use case
+    - ecosystem
+    - size
+    - durability
+    - delivery urgency
+    - prior purchase history
+  example_patterns:
+    - "What laptop should I buy?"
+    - "Which headphones should I get?"
+    - "What backpack is best for me?"
+
+health_medical:
+  personalization_axes:
+    - health literacy
+    - access constraints
+    - risk level
+    - communication preference
+  example_patterns:
+    - "What should I do about this symptom?"
+    - "How serious is this?"
+    - "What kind of doctor should I see?"
+  safety_rules:
+    - "Do not ask the model to diagnose."
+    - "Avoid emergency-only examples dominating the dataset."
+
+education:
+  personalization_axes:
+    - background knowledge
+    - goal
+    - explanation style
+    - time constraints
+  example_patterns:
+    - "How should I learn causal inference?"
+    - "Which course should I take next?"
+    - "How should I prepare for this exam?"
+
+travel:
+  personalization_axes:
+    - location
+    - budget
+    - mobility
+    - companions
+    - travel style
+    - constraints
+  example_patterns:
+    - "Where should I go this weekend?"
+    - "Plan a short trip for me."
+    - "Where should I stay?"
