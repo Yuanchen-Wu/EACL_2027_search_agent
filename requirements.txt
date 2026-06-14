@@ -1,0 +1,6 @@
+# Core dependencies for the search-agent personalization prototype.
+# Pinned to minor versions for reproducibility; bump as needed.
+
+google-genai>=1.0.0,<2.0.0
+tavily-python>=0.5.0,<1.0.0
+python-dotenv>=1.0.0,<2.0.0

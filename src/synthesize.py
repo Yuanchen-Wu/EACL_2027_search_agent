@@ -1,0 +1,118 @@
+"""Final answer synthesis via Gemini.
+
+The synthesis step is deliberately conservative: it answers the user query using
+the retrieved evidence, only leans on persona context when relevant, and is
+explicit about uncertainty and the non-exhaustiveness of the retrieved sources.
+
+Whether persona context is passed in is controlled by the variant (handled by
+the caller in ``run_agent.py``), but ``synthesize_answer`` also defensively
+ignores the persona when ``persona is None``.
+"""
+
+from __future__ import annotations
+
+from collections import defaultdict
+from typing import List, Optional
+
+from config import (
+    DEFAULT_GEMINI_MODEL,
+    MAX_RESULTS_PER_BRANCH_FOR_SYNTHESIS,
+)
+from llm_gemini import call_gemini
+from schemas import Persona, SearchResult
+
+
+def _select_results_for_synthesis(
+    search_results: List[SearchResult],
+    max_per_branch: int = MAX_RESULTS_PER_BRANCH_FOR_SYNTHESIS,
+) -> List[SearchResult]:
+    """Cap evidence at top-N per branch query to keep context manageable."""
+    by_branch: dict[str, List[SearchResult]] = defaultdict(list)
+    for result in search_results:
+        by_branch[result.branch_query].append(result)
+
+    selected: List[SearchResult] = []
+    for branch_query, results in by_branch.items():
+        ranked = sorted(results, key=lambda r: r.rank)
+        selected.extend(ranked[:max_per_branch])
+    return selected
+
+
+def _format_evidence(results: List[SearchResult]) -> str:
+    """Render evidence into a compact, citable text block."""
+    if not results:
+        return "(no search evidence was retrieved)"
+
+    lines: List[str] = []
+    for idx, r in enumerate(results, start=1):
+        dup = " [duplicate-url]" if r.is_duplicate_url else ""
+        lines.append(
+            f"[{idx}] ({r.branch_type}) {r.title}{dup}\n"
+            f"    URL: {r.url}\n"
+            f"    {r.content.strip()}"
+        )
+    return "\n\n".join(lines)
+
+
+def _persona_block(persona: Optional[Persona]) -> str:
+    if persona is None:
+        return ""
+    import json
+
+    attrs = json.dumps(persona.attributes, ensure_ascii=False)
+    return (
+        "\nUser persona/context (use ONLY when genuinely relevant; do not "
+        "over-personalize):\n"
+        f"  description: {persona.description}\n"
+        f"  attributes: {attrs}\n"
+    )
+
+
+def synthesize_answer(
+    user_query: str,
+    persona: Optional[Persona],
+    search_results: List[SearchResult],
+    variant: str,
+    *,
+    model: str = DEFAULT_GEMINI_MODEL,
+) -> str:
+    """Synthesize a final answer from the user query and retrieved evidence.
+
+    Args:
+        user_query: The original user question.
+        persona: Persona context, or ``None`` to synthesize without it. For
+            V0/V1 the caller passes ``None``; for V2/V3/V4 it passes the persona.
+        search_results: Collected evidence across all branches.
+        variant: The experimental variant (included for traceability).
+        model: Gemini model name.
+
+    Returns:
+        The synthesized answer text.
+    """
+    selected = _select_results_for_synthesis(search_results)
+    evidence_block = _format_evidence(selected)
+    persona_block = _persona_block(persona)
+
+    prompt = f"""You are a careful research assistant. Answer the user's question
+directly and helpfully, grounded in the retrieved web evidence below.
+
+Guidelines:
+- Answer the question directly; lead with the most useful information.
+- Ground claims in the retrieved evidence. Cite source titles or URLs inline
+  (e.g. "according to [title]" or with the URL) when you rely on a source.
+- Do NOT over-personalize. Only use the persona context when it is genuinely
+  relevant to giving a better answer.
+- If the evidence is weak, sparse, or conflicting, say so and express the
+  appropriate uncertainty.
+- Do NOT pretend the retrieved sources are exhaustive or authoritative; they are
+  a limited sample of the web.
+- Be concise but complete.
+
+User question: {user_query}
+{persona_block}
+Retrieved evidence:
+{evidence_block}
+
+Now write the final answer."""
+
+    return call_gemini(prompt, model=model, temperature=0.4)

@@ -1,0 +1,5 @@
+{"query_id": "q_product_laptop", "category": "product recommendation", "query": "What laptop should I buy for ML research?"}
+{"query_id": "q_travel_tokyo", "category": "travel/local planning", "query": "Plan a 4-day trip to Tokyo with good food and museums."}
+{"query_id": "q_tech_transformers", "category": "technical explanation", "query": "How does the attention mechanism in transformers work?"}
+{"query_id": "q_health_sleep", "category": "health/wellness information", "query": "How can I improve my sleep quality naturally?"}
+{"query_id": "q_career_mleng", "category": "career/education advice", "query": "How do I transition from software engineering into machine learning engineering?"}

@@ -1,0 +1,22 @@
+# Secrets
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# Experiment outputs (logs can be large; keep them local by default)
+outputs/*.jsonl
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
