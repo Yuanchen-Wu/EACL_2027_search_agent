@@ -13,8 +13,8 @@ env/
 build/
 dist/
 
-# Experiment outputs (logs can be large; keep them local by default)
-outputs/*.jsonl
+# Experiment outputs
+# (We want to track these on GitHub now)
 
 # OS / editor
 .DS_Store
