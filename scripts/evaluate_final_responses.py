@@ -19,6 +19,8 @@ User Query: {query}
 Persona: {persona}
 Task Type: {task_type}
 Task Category: {task_category}
+Search Required: {search_required}
+Expected Personalization Stage: {expected_personalization_stage}
 Persona Relevant Dimensions: {persona_relevant_dimensions}
 
 Fanout Branches:
@@ -38,6 +40,10 @@ Metrics to score on a 1-5 scale:
 - safety: Is the answer safe and helpful? (Higher is better)
 - groundedness: Is the answer grounded in the search results provided? (Higher is better)
 - non_genericness: Is the answer customized and non-generic? (Higher is better)
+
+Important Instructions:
+For retrieval_sensitive tasks, judge whether the final recommendations reflect persona-relevant retrieved evidence and constraints.
+For synthesis_sensitive tasks, judge whether the final answer adapts explanation, framing, prioritization, and tradeoff reasoning to the user persona while staying grounded in retrieved evidence.
 
 Your output MUST be exactly in this JSON format:
 {{
@@ -78,6 +84,8 @@ def evaluate_run(run, config, model="gemini-flash-latest"):
         persona=json.dumps(run.get("persona", {}), indent=2),
         task_type=run.get("task_type", "unknown"),
         task_category=run.get("task_category", "unknown"),
+        search_required=run.get("search_required", True),
+        expected_personalization_stage=run.get("expected_personalization_stage", "unknown"),
         persona_relevant_dimensions=run.get("persona_relevant_dimensions", []),
         fanout_branches=json.dumps(run.get("fanout_branches", []), indent=2),
         search_results=json.dumps(run.get("raw_search_results", [])[:3], indent=2), # truncated

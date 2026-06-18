@@ -56,12 +56,12 @@ def build_plan(
     plan: List[tuple[QueryRecord, Optional[Persona], str]] = []
 
     for q in queries:
-        # For this ablation, we don't deduplicate V0/V1 if we want strict
-        # output grouping by (query, persona, variant).
-        # But keeping deduplication for V0/V1 is okay if we log persona=None.
-        # Actually to keep it simple and fulfill the "every logged run must include persona_id"
-        # we will run it once per persona even for V0/V1 so that metrics can easily join by persona.
+        target_pid = q.metadata.get("persona_id")
+        
         for persona in persona_list:
+            if target_pid and persona.persona_id != target_pid:
+                continue
+                
             for variant in variants_to_run:
                 plan.append((q, persona, variant))
     return plan

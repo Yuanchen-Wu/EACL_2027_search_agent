@@ -18,6 +18,8 @@ User Query: {query}
 Persona: {persona}
 Task Type: {task_type}
 Task Category: {task_category}
+Search Required: {search_required}
+Expected Personalization Stage: {expected_personalization_stage}
 Persona Relevant Dimensions: {persona_relevant_dimensions}
 
 Generated Fanout Branches to Evaluate:
@@ -31,7 +33,10 @@ Metrics to score on a 1-5 scale:
 - faithfulness_to_user_query: Do the subqueries preserve the original user intent? (Higher is better)
 - overpersonalization_risk: Do the subqueries overuse irrelevant persona details? (1 = no problematic overpersonalization, 5 = severe overpersonalization)
 
-Important instruction: Do not reward a fan-out merely because it repeats persona words. Reward only persona usage that is relevant to the original query.
+Important Instructions:
+Do not reward a fan-out merely because it repeats persona words. Reward only persona usage that is relevant to the original query.
+For retrieval_sensitive tasks, reward fan-out that translates relevant persona constraints into useful search queries.
+For synthesis_sensitive tasks, do not require heavy persona-specific fan-out. Reward faithful, search-worthy, evidence-grounding queries. Penalize fan-out that over-personalizes by narrowing the search away from the user's actual information need.
 
 Your output MUST be exactly in this JSON format:
 {{
@@ -70,6 +75,8 @@ def evaluate_fanout(run, config, model="gemini-flash-latest"):
         persona=json.dumps(run.get("persona", {}), indent=2),
         task_type=run.get("task_type", "unknown"),
         task_category=run.get("task_category", "unknown"),
+        search_required=run.get("search_required", True),
+        expected_personalization_stage=run.get("expected_personalization_stage", "unknown"),
         persona_relevant_dimensions=run.get("persona_relevant_dimensions", []),
         fanout_branches=json.dumps(run.get("fanout_branches", []), indent=2)
     )

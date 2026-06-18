@@ -58,6 +58,8 @@ def build_run_log(
         task_type=query_record.task_type,
         task_category=query_record.task_category,
         persona_relevant_dimensions=query_record.persona_relevant_dimensions,
+        search_required=query_record.search_required,
+        expected_personalization_stage=query_record.expected_personalization_stage,
         persona_id=persona.persona_id if persona else None,
         persona=persona.as_dict() if persona else None,
         fanout_branches=[b.as_dict() for b in fanout_branches],

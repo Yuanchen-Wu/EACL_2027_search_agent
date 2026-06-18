@@ -63,11 +63,26 @@ def main():
         print("\nBy task_type:")
         for k, v in task_types.items():
             print(f"  {k}: {v}")
+            if k == "unknown":
+                print(f"  [WARNING] Found {v} queries with unknown task_type.")
             
         task_categories = Counter([r.task_category for r in records])
         print("\nBy task_category:")
         for k, v in task_categories.items():
             print(f"  {k}: {v}")
+            if k == "unknown":
+                print(f"  [WARNING] Found {v} queries with unknown task_category.")
+
+        missing_search = sum(1 for r in records if not r.search_required)
+        missing_stage = sum(1 for r in records if not r.expected_personalization_stage or r.expected_personalization_stage == "unknown")
+        missing_dims = sum(1 for r in records if not r.persona_relevant_dimensions)
+        if missing_search > 0: print(f"  [WARNING] {missing_search} queries missing search_required=True")
+        if missing_stage > 0: print(f"  [WARNING] {missing_stage} queries missing expected_personalization_stage")
+        if missing_dims > 0: print(f"  [WARNING] {missing_dims} queries have empty persona_relevant_dimensions")
+
+        if len(records) != 24:
+            print(f"  [WARNING] Expected 24 queries, found {len(records)}.")
+
     else:
         print("Skipping queries distribution (file not found).")
         
@@ -80,6 +95,8 @@ def main():
                 if line.strip():
                     personas.append(Persona.from_dict(json.loads(line)))
         print(f"Loaded {len(personas)} personas.")
+        if len(personas) != 6:
+            print(f"  [WARNING] Expected exactly 6 personas, found {len(personas)}.")
     else:
         print("Skipping personas check (file not found).")
 

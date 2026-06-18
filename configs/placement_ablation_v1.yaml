@@ -8,8 +8,18 @@ variants:
   - V4_mixed_fanout
 
 task_types:
-  - search_native
-  - synthesis_native
+  - retrieval_sensitive
+  - synthesis_sensitive
+
+task_categories:
+  retrieval_sensitive:
+    - travel_dining
+    - shopping_product_recommendation
+  synthesis_sensitive:
+    - technical_explanation
+    - personal_decision_strategy
+
+search_required: true
 
 metrics:
   final_response:
@@ -30,8 +40,8 @@ metrics:
     - evidence_relevance
 
 data:
-  personas_path: data/personas/personas_v1.jsonl
-  queries_path: data/queries/queries_v1.jsonl
+  personas_path: data/generated/synthetic_personas_v1.jsonl
+  queries_path: data/generated/synthetic_queries_v1.jsonl
 
 outputs:
   run_dir: outputs/placement_ablation_v1

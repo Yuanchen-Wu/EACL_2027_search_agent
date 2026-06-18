@@ -11,14 +11,18 @@ Where should persona/context be injected in a search-agent pipeline: query fan-o
 - **V4_mixed_fanout**: Mixed fan-out plus persona-aware synthesis.
 
 ## Task Types
-- `search_native`: e.g., shopping/product comparison, textbook recommendation.
-- `synthesis_native`: e.g., technical concept explanation, career strategy.
+- `retrieval_sensitive`:
+  - `travel_dining`
+  - `shopping_product_recommendation`
+- `synthesis_sensitive`:
+  - `technical_explanation`
+  - `personal_decision_strategy`
 
-**Note:** `task_type` is purely metadata for analysis. It does NOT alter the generation logic or prompt routing at runtime. We want to observe whether the same pipeline configuration naturally behaves differently depending on the inherent nature of the task.
+**Note:** All benchmark queries are search-worthy. The distinction is not whether search is needed, but where personalization is expected to matter most. `task_type` is purely metadata for analysis. It does NOT alter the generation logic or prompt routing at runtime. We want to observe whether the same pipeline configuration naturally behaves differently depending on the inherent nature of the task.
 
 ## Expected Hypotheses
-- Personalized fan-out (`V3`) should provide a larger marginal benefit on **search-native tasks** where specific retrieved evidence is critical.
-- Personalized synthesis (`V2`) should provide a larger marginal benefit on **synthesis-native tasks** where the main challenge is tone/explanation-level alignment rather than new fact retrieval.
+- Personalized fan-out (`V3`) should provide a larger marginal benefit on **retrieval-sensitive tasks** where specific retrieved evidence is critical.
+- Personalized synthesis (`V2`) should provide a larger marginal benefit on **synthesis-sensitive tasks** where the main challenge is tone/explanation-level alignment rather than new fact retrieval.
 
 ## Main Comparisons
 - **V2 - V1**: The marginal effect of persona-aware synthesis.

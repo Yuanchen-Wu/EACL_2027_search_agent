@@ -117,6 +117,8 @@ class QueryRecord:
     task_type: str = "unknown"
     task_category: str = "unknown"
     persona_relevant_dimensions: List[str] = field(default_factory=list)
+    search_required: bool = True
+    expected_personalization_stage: str = "unknown"
     metadata: Dict[str, Any] = field(default_factory=dict)
 
     def as_dict(self) -> Dict[str, Any]:
@@ -127,44 +129,53 @@ class QueryRecord:
         query_id = data.get("query_id", data.get("id", data.get("example_id", "unknown")))
         
         task_category = data.get("task_category", data.get("category", data.get("domain", "unknown")))
+        task_type = data.get("task_type", "unknown")
         
-        # normalize task_category
+        # Backward compatibility mapping
         cat_lower = task_category.lower()
-        if any(x in cat_lower for x in ["ecommerce", "product", "shopping"]):
-            if "tech" in cat_lower or "comparison" in cat_lower:
-                task_category = "tech_product_comparison"
-            else:
-                task_category = "shopping_commerce"
-        elif any(x in cat_lower for x in ["textbook", "book", "course", "resource"]):
-            task_category = "textbook_or_resource_recommendation"
-        elif any(x in cat_lower for x in ["technical", "concept"]):
+        tt_lower = task_type.lower()
+        
+        if tt_lower == "search_native":
+            task_type = "retrieval_sensitive"
+        elif tt_lower == "synthesis_native":
+            task_type = "synthesis_sensitive"
+            
+        if "travel" in cat_lower or "local" in cat_lower or "dining" in cat_lower:
+            task_category = "travel_dining"
+            task_type = "retrieval_sensitive"
+        elif any(x in cat_lower for x in ["shopping", "commerce", "product", "textbook", "resource", "course"]):
+            task_category = "shopping_product_recommendation"
+            task_type = "retrieval_sensitive"
+        elif "technical" in cat_lower and "explanation" in cat_lower:
             task_category = "technical_explanation"
-        elif any(x in cat_lower for x in ["career", "education advice", "professional"]):
-            task_category = "professional_career_strategy"
-        elif any(x in cat_lower for x in ["health", "wellness"]):
-            task_category = "health_information"
-        elif any(x in cat_lower for x in ["travel", "local"]):
-            task_category = "travel_local_planning"
-
-        task_type = data.get("task_type")
-        if not task_type:
-            q_type = str(data.get("query_type", "")).lower()
-            combined_hint = task_category.lower() + " " + q_type
-            
-            search_keywords = ["shopping", "ecommerce", "product", "textbook", "course", "resource", "travel", "local"]
-            synthesis_keywords = ["technical", "career", "education advice", "professional", "background-adaptive", "explanation", "conceptual"]
-            
-            if any(k in combined_hint for k in search_keywords):
-                task_type = "search_native"
-            elif any(k in combined_hint for k in synthesis_keywords):
-                task_type = "synthesis_native"
+            task_type = "synthesis_sensitive"
+        elif any(x in cat_lower for x in ["professional", "career", "education", "decision", "strategy"]):
+            task_category = "personal_decision_strategy"
+            task_type = "synthesis_sensitive"
+        else:
+            # Fallbacks for unknown categories
+            if task_type == "retrieval_sensitive":
+                task_category = "shopping_product_recommendation"
+            elif task_type == "synthesis_sensitive":
+                task_category = "technical_explanation"
             else:
                 task_type = "unknown"
-                print(f"Warning: Could not infer task_type for query {query_id}. Defaulting to 'unknown'.")
-        
+                print(f"Warning: Could not map task_type/category for query {query_id}. Defaulting to unknown.")
+
+        expected_stage = data.get("expected_personalization_stage")
+        if not expected_stage or expected_stage == "unknown":
+            if task_type == "retrieval_sensitive":
+                expected_stage = "fanout_retrieval"
+            elif task_type == "synthesis_sensitive":
+                expected_stage = "final_synthesis"
+            else:
+                expected_stage = "unknown"
+
+        search_req = data.get("search_required", True)
+
         metadata = {}
         for k, v in data.items():
-            if k not in ["query", "query_id", "id", "example_id", "task_type", "task_category", "category", "domain", "persona_relevant_dimensions"]:
+            if k not in ["query", "query_id", "id", "example_id", "task_type", "task_category", "category", "domain", "persona_relevant_dimensions", "search_required", "expected_personalization_stage"]:
                 metadata[k] = v
 
         return cls(
@@ -173,6 +184,8 @@ class QueryRecord:
             task_type=task_type,
             task_category=task_category,
             persona_relevant_dimensions=data.get("persona_relevant_dimensions", []),
+            search_required=search_req,
+            expected_personalization_stage=expected_stage,
             metadata=metadata
         )
 
@@ -234,6 +247,8 @@ class RunLog:
     task_type: str
     task_category: str
     persona_relevant_dimensions: List[str]
+    search_required: bool
+    expected_personalization_stage: str
     persona_id: Optional[str]
     persona: Optional[Dict[str, Any]]
     fanout_branches: List[Dict[str, Any]]

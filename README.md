@@ -13,7 +13,9 @@ When building a retrieval-augmented agent, you can inject the user's persona/con
 
 The goal of this repository is to provide a cleaner research experiment structure for a personalization-placement ablation study, while preserving existing working functionality. The main goal is to make the experiment reproducible, well-logged, and easy to analyze.
 
-**Explicit Warning:** `task_type` is used for analysis only. It must NOT alter generation behavior. We want to test whether the same personalization-placement variants naturally perform differently across task types. Do not write generation logic that branches on `task_type`.
+All benchmark queries are search-worthy. The distinction is not whether search is needed, but where personalization is expected to matter most.
+
+**Explicit Warning:** `task_type` is used for analysis only. It must NOT alter generation behavior. We want to test whether the same personalization-placement variants naturally perform differently across task types (`retrieval_sensitive` vs `synthesis_sensitive`). Do not write generation logic that branches on `task_type`.
 
 ## Pipeline
 ```
@@ -97,7 +99,7 @@ Follow these steps sequentially to run the full pipeline:
 ### 1. Generate Synthetic Data
 Generate the synthetic user personas and search queries:
 ```bash
-python scripts/generate_synthetic_data.py
+python scripts/generate_synthetic_data.py --num_users 6 --queries_per_category 1
 ```
 
 ### 2. Validate Experiment Setup
