@@ -53,14 +53,25 @@ def load_personas(path: str = DEFAULT_PERSONAS_PATH) -> Dict[str, Persona]:
     personas: Dict[str, Persona] = {}
     if not os.path.exists(path):
         return personas
-    with open(path, "r", encoding="utf-8") as fh:
-        for line in fh:
-            line = line.strip()
-            if not line:
-                continue
-            data = json.loads(line)
-            persona = Persona.from_dict(data)
-            personas[persona.persona_id] = persona
+
+    paths = []
+    if os.path.isdir(path):
+        for root, _, files in os.walk(path):
+            for file in files:
+                if file.endswith(".jsonl"):
+                    paths.append(os.path.join(root, file))
+    else:
+        paths = [path]
+
+    for p in paths:
+        with open(p, "r", encoding="utf-8") as fh:
+            for line in fh:
+                line = line.strip()
+                if not line:
+                    continue
+                data = json.loads(line)
+                persona = Persona.from_dict(data)
+                personas[persona.persona_id] = persona
     return personas
 
 

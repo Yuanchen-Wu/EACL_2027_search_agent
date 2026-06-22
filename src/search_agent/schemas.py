@@ -13,7 +13,7 @@ from typing import Any, Dict, List, Optional
 
 # Branch types used throughout the fan-out logic. Kept as a simple tuple so it
 # is trivial to validate against and to extend later.
-BRANCH_TYPES = ("generic", "personalized")
+BRANCH_TYPES = ("generic", "personalized", "constraint", "disconfirming")
 
 # Variant identifiers. Centralized here so the CLI, batch runner, and fan-out
 # logic all agree on the canonical names.
@@ -40,6 +40,7 @@ class Persona:
 
     persona_id: str
     description: str
+    macro_domain: str = "education"
     attributes: Dict[str, Any] = field(default_factory=dict)
     observable_history: List[Dict[str, Any]] = field(default_factory=list)
     distractor_history: List[Dict[str, Any]] = field(default_factory=list)
@@ -52,6 +53,7 @@ class Persona:
         return cls(
             persona_id=data["persona_id"],
             description=data.get("description", ""),
+            macro_domain=data.get("macro_domain", "education"),
             attributes=data.get("attributes", {}) or {},
             observable_history=data.get("observable_history", []) or [],
             distractor_history=data.get("distractor_history", []) or [],
@@ -116,6 +118,7 @@ class QueryRecord:
     query_id: str = "unknown"
     task_type: str = "unknown"
     task_category: str = "unknown"
+    macro_domain: str = "education"
     persona_relevant_dimensions: List[str] = field(default_factory=list)
     search_required: bool = True
     expected_personalization_stage: str = "unknown"
@@ -130,6 +133,7 @@ class QueryRecord:
         
         task_category = data.get("task_category", data.get("category", data.get("domain", "unknown")))
         task_type = data.get("task_type", "unknown")
+        macro_domain = data.get("macro_domain", "education")
         
         # Backward compatibility mapping
         cat_lower = task_category.lower()
@@ -139,28 +143,46 @@ class QueryRecord:
             task_type = "retrieval_sensitive"
         elif tt_lower == "synthesis_native":
             task_type = "synthesis_sensitive"
-            
-        if "travel" in cat_lower or "local" in cat_lower or "dining" in cat_lower:
-            task_category = "travel_dining"
+
+        # Check if it's already a known new category
+        known_retrieval = {
+            "travel_dining", "shopping_product_recommendation",
+            "jurisdiction_resource_lookup", "form_policy_deadline_lookup",
+            "product_or_program_comparison", "current_rule_limit_lookup"
+        }
+        known_synthesis = {
+            "technical_explanation", "personal_decision_strategy",
+            "legal_issue_explanation", "legal_decision_strategy",
+            "financial_concept_explanation", "financial_decision_strategy"
+        }
+
+        if task_category in known_retrieval:
             task_type = "retrieval_sensitive"
-        elif any(x in cat_lower for x in ["shopping", "commerce", "product", "textbook", "resource", "course"]):
-            task_category = "shopping_product_recommendation"
-            task_type = "retrieval_sensitive"
-        elif "technical" in cat_lower and "explanation" in cat_lower:
-            task_category = "technical_explanation"
-            task_type = "synthesis_sensitive"
-        elif any(x in cat_lower for x in ["professional", "career", "education", "decision", "strategy"]):
-            task_category = "personal_decision_strategy"
+        elif task_category in known_synthesis:
             task_type = "synthesis_sensitive"
         else:
-            # Fallbacks for unknown categories
-            if task_type == "retrieval_sensitive":
+            # Fallback mappings for education and travel-like legacies
+            if "travel" in cat_lower or "local" in cat_lower or "dining" in cat_lower:
+                task_category = "travel_dining"
+                task_type = "retrieval_sensitive"
+            elif any(x in cat_lower for x in ["shopping", "commerce", "product", "textbook", "resource", "course"]):
                 task_category = "shopping_product_recommendation"
-            elif task_type == "synthesis_sensitive":
+                task_type = "retrieval_sensitive"
+            elif "technical" in cat_lower and "explanation" in cat_lower:
                 task_category = "technical_explanation"
+                task_type = "synthesis_sensitive"
+            elif any(x in cat_lower for x in ["professional", "career", "education", "decision", "strategy"]):
+                task_category = "personal_decision_strategy"
+                task_type = "synthesis_sensitive"
             else:
-                task_type = "unknown"
-                print(f"Warning: Could not map task_type/category for query {query_id}. Defaulting to unknown.")
+                # Fallbacks for unknown categories
+                if task_type == "retrieval_sensitive":
+                    task_category = "shopping_product_recommendation"
+                elif task_type == "synthesis_sensitive":
+                    task_category = "technical_explanation"
+                else:
+                    task_type = "unknown"
+                    print(f"Warning: Could not map task_type/category for query {query_id}. Defaulting to unknown.")
 
         expected_stage = data.get("expected_personalization_stage")
         if not expected_stage or expected_stage == "unknown":
@@ -175,14 +197,20 @@ class QueryRecord:
 
         metadata = {}
         for k, v in data.items():
-            if k not in ["query", "query_id", "id", "example_id", "task_type", "task_category", "category", "domain", "persona_relevant_dimensions", "search_required", "expected_personalization_stage"]:
+            if k not in ["query", "query_id", "id", "example_id", "task_type", "task_category", "category", "domain", "persona_relevant_dimensions", "search_required", "expected_personalization_stage", "macro_domain"]:
                 metadata[k] = v
+
+        # Flatten nested metadata if present
+        if "metadata" in metadata and isinstance(metadata["metadata"], dict):
+            nested = metadata.pop("metadata")
+            metadata.update(nested)
 
         return cls(
             query=data.get("query", ""),
             query_id=query_id,
             task_type=task_type,
             task_category=task_category,
+            macro_domain=macro_domain,
             persona_relevant_dimensions=data.get("persona_relevant_dimensions", []),
             search_required=search_req,
             expected_personalization_stage=expected_stage,
@@ -246,6 +274,7 @@ class RunLog:
     query_id: str
     task_type: str
     task_category: str
+    macro_domain: str
     persona_relevant_dimensions: List[str]
     search_required: bool
     expected_personalization_stage: str

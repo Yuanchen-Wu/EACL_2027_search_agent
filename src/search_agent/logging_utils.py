@@ -57,6 +57,7 @@ def build_run_log(
         query_id=query_record.query_id,
         task_type=query_record.task_type,
         task_category=query_record.task_category,
+        macro_domain=query_record.macro_domain,
         persona_relevant_dimensions=query_record.persona_relevant_dimensions,
         search_required=query_record.search_required,
         expected_personalization_stage=query_record.expected_personalization_stage,

@@ -22,48 +22,69 @@ def main():
         
     final_scores_path = config.get("outputs", {}).get("final_response_scores_path")
     fanout_scores_path = config.get("outputs", {}).get("fanout_scores_path")
+    retrieval_scores_path = config.get("outputs", {}).get("retrieval_scores_path")
     
     if not os.path.isabs(final_scores_path): final_scores_path = os.path.join(_PROJECT_ROOT, final_scores_path)
     if not os.path.isabs(fanout_scores_path): fanout_scores_path = os.path.join(_PROJECT_ROOT, fanout_scores_path)
+    if retrieval_scores_path and not os.path.isabs(retrieval_scores_path):
+        retrieval_scores_path = os.path.join(_PROJECT_ROOT, retrieval_scores_path)
     
     # Load scores
-    runs_data = defaultdict(lambda: {"final": {}, "fanout": {}, "meta": {}})
+    runs_data = defaultdict(lambda: {"final": {}, "fanout": {}, "retrieval": {}, "meta": {}})
     
     if os.path.exists(final_scores_path):
-        with open(final_scores_path, "r") as f:
+        with open(final_scores_path, "r", encoding="utf-8") as f:
             for line in f:
-                d = json.loads(line)
-                runs_data[d["run_id"]]["final"] = d["scores"]
-                runs_data[d["run_id"]]["meta"] = d
+                if line.strip():
+                    d = json.loads(line)
+                    runs_data[d["run_id"]]["final"] = d.get("scores", {})
+                    runs_data[d["run_id"]]["meta"].update(d)
                 
     if os.path.exists(fanout_scores_path):
-        with open(fanout_scores_path, "r") as f:
+        with open(fanout_scores_path, "r", encoding="utf-8") as f:
             for line in f:
-                d = json.loads(line)
-                runs_data[d["run_id"]]["fanout"] = d["scores"]
-                runs_data[d["run_id"]]["meta"].update(d)
+                if line.strip():
+                    d = json.loads(line)
+                    runs_data[d["run_id"]]["fanout"] = d.get("scores", {})
+                    runs_data[d["run_id"]]["meta"].update(d)
+
+    if retrieval_scores_path and os.path.exists(retrieval_scores_path):
+        with open(retrieval_scores_path, "r", encoding="utf-8") as f:
+            for line in f:
+                if line.strip():
+                    d = json.loads(line)
+                    runs_data[d["run_id"]]["retrieval"] = d.get("scores", {})
+                    runs_data[d["run_id"]]["meta"].update(d)
                 
     # Groupings
     by_variant = defaultdict(lambda: defaultdict(list))
     by_variant_task_type = defaultdict(lambda: defaultdict(list))
     by_variant_task_cat = defaultdict(lambda: defaultdict(list))
+    by_variant_macro_domain = defaultdict(lambda: defaultdict(list))
+    by_variant_macro_domain_task_type = defaultdict(lambda: defaultdict(list))
     
     for rid, data in runs_data.items():
         meta = data["meta"]
+        if not meta:
+            continue
         var = meta.get("variant")
         tt = meta.get("task_type")
         tc = meta.get("task_category")
+        domain = meta.get("macro_domain", "education")
         
         flat_scores = {}
         for k, v in data["final"].items(): flat_scores[f"final_{k}"] = v
         for k, v in data["fanout"].items(): flat_scores[f"fanout_{k}"] = v
+        for k, v in data["retrieval"].items(): flat_scores[f"retrieval_{k}"] = v
             
         for k, v in flat_scores.items():
             by_variant[var][k].append(v)
             by_variant_task_type[(var, tt)][k].append(v)
             by_variant_task_cat[(var, tc)][k].append(v)
+            by_variant_macro_domain[(var, domain)][k].append(v)
+            by_variant_macro_domain_task_type[(var, domain, tt)][k].append(v)
             
-    # Write CSVs
+    # Write CSVs helper
     def write_csv(path, group_dict, key_names):
         if not group_dict: return
         os.makedirs(os.path.dirname(path), exist_ok=True)
@@ -73,7 +94,7 @@ def main():
             all_cols.update(v.keys())
         all_cols = sorted(list(all_cols))
         
-        with open(path, "w", newline="") as f:
+        with open(path, "w", newline="", encoding="utf-8") as f:
             writer = csv.writer(f)
             writer.writerow(key_names + [c + "_mean" for c in all_cols])
             
@@ -88,17 +109,32 @@ def main():
     summary_by_task_type_path = config.get("outputs", {}).get("summary_by_variant_task_type_path")
     summary_by_task_cat_path = config.get("outputs", {}).get("summary_by_variant_task_category_path")
     
+    summary_by_macro_domain_path = config.get("outputs", {}).get("summary_by_macro_domain_path")
+    summary_by_macro_domain_task_type_path = config.get("outputs", {}).get("summary_by_macro_domain_task_type_path")
+    
     if not os.path.isabs(summary_by_variant_path): summary_by_variant_path = os.path.join(_PROJECT_ROOT, summary_by_variant_path)
     if not os.path.isabs(summary_by_task_type_path): summary_by_task_type_path = os.path.join(_PROJECT_ROOT, summary_by_task_type_path)
     if not os.path.isabs(summary_by_task_cat_path): summary_by_task_cat_path = os.path.join(_PROJECT_ROOT, summary_by_task_cat_path)
     
+    if not summary_by_macro_domain_path:
+        summary_by_macro_domain_path = os.path.join(os.path.dirname(summary_by_variant_path), "summary_by_macro_domain.csv")
+    elif not os.path.isabs(summary_by_macro_domain_path):
+        summary_by_macro_domain_path = os.path.join(_PROJECT_ROOT, summary_by_macro_domain_path)
+        
+    if not summary_by_macro_domain_task_type_path:
+        summary_by_macro_domain_task_type_path = os.path.join(os.path.dirname(summary_by_variant_path), "summary_by_macro_domain_task_type.csv")
+    elif not os.path.isabs(summary_by_macro_domain_task_type_path):
+        summary_by_macro_domain_task_type_path = os.path.join(_PROJECT_ROOT, summary_by_macro_domain_task_type_path)
+        
     write_csv(summary_by_variant_path, by_variant, ["variant"])
     write_csv(summary_by_task_type_path, by_variant_task_type, ["variant", "task_type"])
     write_csv(summary_by_task_cat_path, by_variant_task_cat, ["variant", "task_category"])
+    write_csv(summary_by_macro_domain_path, by_variant_macro_domain, ["variant", "macro_domain"])
+    write_csv(summary_by_macro_domain_task_type_path, by_variant_macro_domain_task_type, ["variant", "macro_domain", "task_type"])
     
     print(f"Saved summaries to {os.path.dirname(summary_by_variant_path)}")
     
-    # Task 6: Summary contrasts
+    # Summary contrasts by task type
     contrasts_path = config.get("outputs", {}).get("summary_contrasts_by_task_type_path")
     if contrasts_path:
         if not os.path.isabs(contrasts_path): contrasts_path = os.path.join(_PROJECT_ROOT, contrasts_path)
@@ -110,21 +146,20 @@ def main():
             ("mixed/disconfirming fan-out effect", "V4_mixed_fanout", "V3_personalized_fanout")
         ]
         
-        all_task_types = set(tt for (var, tt) in by_variant_task_type.keys())
+        all_task_types = set(tt for (var, tt) in by_variant_task_type.keys() if tt)
         all_metrics = set()
         for v in by_variant_task_type.values(): all_metrics.update(v.keys())
         all_metrics = sorted(list(all_metrics))
         
-        lower_is_better_metrics = {"final_overpersonalization", "fanout_overpersonalization_risk"}
+        lower_is_better_metrics = {"final_overpersonalization", "fanout_overpersonalization_risk", "retrieval_unsafe_or_overpersonalized_retrieval_risk"}
         
-        with open(contrasts_path, "w", newline="") as f:
+        with open(contrasts_path, "w", newline="", encoding="utf-8") as f:
             writer = csv.writer(f)
             writer.writerow(["task_type", "metric", "contrast_name", "variant_a", "variant_b", "mean_a", "mean_b", "diff_a_minus_b", "higher_is_better"])
             
             for tt in all_task_types:
                 for metric in all_metrics:
                     higher_is_better = str(metric not in lower_is_better_metrics).lower()
-                    
                     for contrast_name, var_a, var_b in contrasts:
                         scores_a = by_variant_task_type.get((var_a, tt), {}).get(metric, [])
                         scores_b = by_variant_task_type.get((var_b, tt), {}).get(metric, [])
@@ -135,7 +170,47 @@ def main():
                             diff = mean_a - mean_b
                             writer.writerow([tt, metric, contrast_name, var_a, var_b, f"{mean_a:.2f}", f"{mean_b:.2f}", f"{diff:.2f}", higher_is_better])
                             
-        print(f"Saved contrasts to {contrasts_path}")
+        print(f"Saved contrasts by task type to {contrasts_path}")
+
+    # Summary contrasts by macro-domain and task type
+    contrasts_by_macro_domain_path = config.get("outputs", {}).get("contrasts_by_macro_domain_task_type_path")
+    if not contrasts_by_macro_domain_path:
+        contrasts_by_macro_domain_path = os.path.join(os.path.dirname(summary_by_variant_path), "contrasts_by_macro_domain_task_type.csv")
+    elif not os.path.isabs(contrasts_by_macro_domain_path):
+        contrasts_by_macro_domain_path = os.path.join(_PROJECT_ROOT, contrasts_by_macro_domain_path)
+        
+    contrasts = [
+        ("synthesis personalization effect", "V2_synthesis_only_personalization", "V1_generic_fanout"),
+        ("marginal personalized fan-out effect given personalized synthesis", "V3_personalized_fanout", "V2_synthesis_only_personalization"),
+        ("full personalization gain over generic fan-out", "V3_personalized_fanout", "V1_generic_fanout"),
+        ("mixed/disconfirming fan-out effect", "V4_mixed_fanout", "V3_personalized_fanout")
+    ]
+    
+    all_domains_task_types = set((domain, tt) for (var, domain, tt) in by_variant_macro_domain_task_type.keys() if domain and tt)
+    all_metrics = set()
+    for v in by_variant_macro_domain_task_type.values(): all_metrics.update(v.keys())
+    all_metrics = sorted(list(all_metrics))
+    
+    lower_is_better_metrics = {"final_overpersonalization", "fanout_overpersonalization_risk", "retrieval_unsafe_or_overpersonalized_retrieval_risk"}
+    
+    with open(contrasts_by_macro_domain_path, "w", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+        writer.writerow(["macro_domain", "task_type", "metric", "contrast_name", "variant_a", "variant_b", "mean_a", "mean_b", "diff_a_minus_b", "higher_is_better"])
+        
+        for domain, tt in sorted(all_domains_task_types):
+            for metric in all_metrics:
+                higher_is_better = str(metric not in lower_is_better_metrics).lower()
+                for contrast_name, var_a, var_b in contrasts:
+                    scores_a = by_variant_macro_domain_task_type.get((var_a, domain, tt), {}).get(metric, [])
+                    scores_b = by_variant_macro_domain_task_type.get((var_b, domain, tt), {}).get(metric, [])
+                    
+                    if scores_a and scores_b:
+                        mean_a = compute_mean(scores_a)
+                        mean_b = compute_mean(scores_b)
+                        diff = mean_a - mean_b
+                        writer.writerow([domain, tt, metric, contrast_name, var_a, var_b, f"{mean_a:.2f}", f"{mean_b:.2f}", f"{diff:.2f}", higher_is_better])
+                        
+    print(f"Saved contrasts by macro-domain and task type to {contrasts_by_macro_domain_path}")
 
 if __name__ == "__main__":
     main()

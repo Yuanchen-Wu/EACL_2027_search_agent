@@ -206,32 +206,31 @@ Return ONLY the JSON array, no prose."""
 def _generate_mixed(
     user_query: str, persona: Optional[Persona], model: str
 ) -> List[FanoutBranch]:
-    """Generate mixed branch types for variant V4."""
-    plan_desc = ", ".join(
-        f"{count} {btype}" for btype, count in MIXED_BRANCH_PLAN.items()
-    )
-    prompt = f"""You are an advanced search query planner. Produce a MIXED set of
-web search queries across two branch types to thoroughly and fairly answer a
-user's question.
+    """Generate mixed branch types for variant V4.
 
-Branch types:
-  - "generic": broad, neutral evidence about the topic (ignore the user context).
-  - "personalized": tailored to the user's needs/preferences that you INFER from
-    their stated details and recent search history (some history is unrelated —
-    use only what is genuinely relevant).
+    Produces exactly 4 branches: 1 generic, 1 personalized, 1 constraint, and 1 disconfirming.
+    """
+    prompt = f"""You are an advanced search query planner. Your goal is to produce a balanced, comprehensive set of web search queries to gather diverse evidence for a user's question, conditioned on their persona context.
+You must generate exactly 4 search queries, one for each of the following branch types:
 
-Aim for roughly: {plan_desc}.
+1. "generic": Search broad evidence for the user query without any persona-specific assumptions or constraints.
+2. "personalized": Search evidence tailored to relevant user persona/history signals (e.g. preferences, background, style).
+3. "constraint": Search evidence targeting hard constraints inferred from the persona/history (such as budget limits, specific jurisdictions, visa/status limitations, family constraints, risk tolerance, deadlines, technical level, etc.).
+4. "disconfirming": Search evidence that could challenge, correct, or check caveats/exceptions for the personalized assumptions.
+   - For legal information: search official exceptions, state-specific caveats, eligibility limits.
+   - For personal finance: search fees, risks, disadvantages, tax caveats, eligibility restrictions.
+   - For education/other: search tradeoffs, negative reviews, limitations, alternative paths.
 
 User question: {user_query!r}
 
 User context:
 {_persona_block(persona)}
 
-Return STRICT JSON: a list of objects, each with fields:
-  "branch_type": one of "generic" | "personalized",
-  "query": the search query string,
-  "rationale": one short sentence,
-  "used_persona_fields": list of inferred user signals used (empty list for generic).
+Return STRICT JSON: a list of exactly 4 objects, each with fields:
+  "branch_type": one of "generic" | "personalized" | "constraint" | "disconfirming",
+  "query": the search query string (should be a concise, realistic search query),
+  "rationale": one short sentence explaining what this query aims to find and why it fits the branch type,
+  "used_persona_fields": list of the user signals/history items you inferred and used (empty list for generic).
 
 Return ONLY the JSON array, no prose."""
     raw = call_gemini(

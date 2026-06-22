@@ -40,12 +40,13 @@ metrics:
     - evidence_relevance
 
 data:
-  personas_path: data/generated/synthetic_personas_v1.jsonl
-  queries_path: data/generated/synthetic_queries_v1.jsonl
+  personas_path: data/synthetic_personas_v1.jsonl
+  queries_path: data/synthetic_queries_v1.jsonl
 
 outputs:
   run_dir: outputs/placement_ablation_v1
   runs_path: outputs/placement_ablation_v1/runs.jsonl
+  retrieval_scores_path: outputs/placement_ablation_v1/retrieval_scores.jsonl
   final_response_scores_path: outputs/placement_ablation_v1/final_response_scores.jsonl
   fanout_scores_path: outputs/placement_ablation_v1/fanout_scores.jsonl
   summary_by_variant_path: outputs/placement_ablation_v1/summary_by_variant.csv

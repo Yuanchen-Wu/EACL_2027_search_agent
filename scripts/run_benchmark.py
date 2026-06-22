@@ -38,12 +38,25 @@ NON_PERSONALIZED_VARIANTS = [
 def load_queries(path: str) -> List[QueryRecord]:
     """Load queries from a JSONL file into QueryRecord objects."""
     queries: List[QueryRecord] = []
-    with open(path, "r", encoding="utf-8") as fh:
-        for line in fh:
-            line = line.strip()
-            if not line:
-                continue
-            queries.append(QueryRecord.from_dict(json.loads(line)))
+    if not os.path.exists(path):
+        return queries
+
+    paths = []
+    if os.path.isdir(path):
+        for root, _, files in os.walk(path):
+            for file in files:
+                if file.endswith(".jsonl"):
+                    paths.append(os.path.join(root, file))
+    else:
+        paths = [path]
+
+    for p in paths:
+        with open(p, "r", encoding="utf-8") as fh:
+            for line in fh:
+                line = line.strip()
+                if not line:
+                    continue
+                queries.append(QueryRecord.from_dict(json.loads(line)))
     return queries
 
 def build_plan(
