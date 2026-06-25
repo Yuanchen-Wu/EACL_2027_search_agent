@@ -21,8 +21,9 @@ VARIANTS = (
     "V0_generic_single",
     "V1_generic_fanout",
     "V2_synthesis_only_personalization",
-    "V3_personalized_fanout",
-    "V4_mixed_fanout",
+    "V3_fanout_only_personalization",
+    "V4_personalized_fanout",
+    "V5_mixed_fanout",
 )
 
 

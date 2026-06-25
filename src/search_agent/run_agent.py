@@ -39,8 +39,8 @@ from .synthesize import synthesize_answer
 # Variants that pass persona context into final synthesis.
 PERSONALIZED_SYNTHESIS_VARIANTS = {
     "V2_synthesis_only_personalization",
-    "V3_personalized_fanout",
-    "V4_mixed_fanout",
+    "V4_personalized_fanout",
+    "V5_mixed_fanout",
 }
 
 DEFAULT_PERSONAS_PATH = os.path.join(

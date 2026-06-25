@@ -216,8 +216,9 @@ def generate_fanout_queries(
     Variant behavior:
       - V0_generic_single: no fan-out; the raw query as one generic branch.
       - V1_generic_fanout / V2_synthesis_only_personalization: generic branches.
-      - V3_personalized_fanout: personalized branches (persona-conditioned).
-      - V4_mixed_fanout: mixed generic/personalized/constraint/disconfirming.
+      - V3_fanout_only_personalization: personalized branches (generic synthesis).
+      - V4_personalized_fanout: personalized branches (personalized synthesis).
+      - V5_mixed_fanout: mixed generic/personalized/constraint/disconfirming.
 
     Returns at least one branch in all cases (fallback guarantees this).
     """
@@ -234,10 +235,10 @@ def generate_fanout_queries(
     if variant in ("V1_generic_fanout", "V2_synthesis_only_personalization"):
         return _generate_generic(user_query, model)
 
-    if variant == "V3_personalized_fanout":
+    if variant in ("V3_fanout_only_personalization", "V4_personalized_fanout"):
         return _generate_personalized(user_query, persona, model)
 
-    if variant == "V4_mixed_fanout":
+    if variant == "V5_mixed_fanout":
         return _generate_mixed(user_query, persona, model)
 
     raise ValueError(f"Unknown variant: {variant!r}")

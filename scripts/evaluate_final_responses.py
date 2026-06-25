@@ -10,7 +10,10 @@ _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(_PROJECT_ROOT, "src"))
 
 from search_agent.llm_gemini import call_gemini
-from search_agent.meta_prompt import FINAL_RESPONSE_JUDGE_PROMPT_TEMPLATE
+from search_agent.meta_prompt import (
+    FINAL_RESPONSE_ANSWER_QUALITY_JUDGE_PROMPT_TEMPLATE,
+    FINAL_RESPONSE_EVIDENCE_FAITHFULNESS_JUDGE_PROMPT_TEMPLATE,
+)
 from search_agent.rubrics import (
     FINAL_RUBRIC_FIELDS,
     format_latent_profile,
@@ -33,6 +36,7 @@ def clean_json_response(text: str) -> str:
 def evaluate_run(run, rubrics, model="gemini-flash-latest", include_latent_profile=False):
     rubric = rubrics.get(run.get("query_id"), {})
 
+    # 1) Build quality prompt
     profile_block = ""
     if include_latent_profile:
         profile_block = (
@@ -40,19 +44,20 @@ def evaluate_run(run, rubrics, model="gemini-flash-latest", include_latent_profi
             "extra ground truth):\n"
             f"{format_latent_profile(run.get('persona') or {})}\n"
         )
-
-    prompt = FINAL_RESPONSE_JUDGE_PROMPT_TEMPLATE.format(
+    quality_prompt = FINAL_RESPONSE_ANSWER_QUALITY_JUDGE_PROMPT_TEMPLATE.format(
         query=run.get("user_query", run.get("query", "")),
         task_type=run.get("task_type", "unknown"),
         task_category=run.get("task_category", "unknown"),
         macro_domain=run.get("macro_domain", "unknown"),
-        search_required=run.get("search_required", True),
-        expected_personalization_stage=run.get("expected_personalization_stage", "unknown"),
-        persona_relevant_dimensions=run.get("persona_relevant_dimensions", []),
         rubric_block=format_rubric(rubric, FINAL_RUBRIC_FIELDS),
         profile_block=profile_block,
-        fanout_branches=json.dumps(run.get("fanout_branches", []), indent=2),
-        search_results=json.dumps(run.get("raw_search_results", [])[:3], indent=2),  # truncated
+        final_answer=run.get("final_answer", ""),
+    )
+
+    # 2) Build faithfulness prompt (does not see profile or rubric)
+    faithfulness_prompt = FINAL_RESPONSE_EVIDENCE_FAITHFULNESS_JUDGE_PROMPT_TEMPLATE.format(
+        query=run.get("user_query", run.get("query", "")),
+        search_results=json.dumps(run.get("raw_search_results", [])[:3], indent=2),  # truncated to top 3
         final_answer=run.get("final_answer", ""),
     )
 
@@ -65,19 +70,37 @@ def evaluate_run(run, rubrics, model="gemini-flash-latest", include_latent_profi
         "task_type": run.get("task_type", "unknown"),
         "task_category": run.get("task_category", "unknown"),
         "rubric_found": bool(rubric),
+        "scores": {},
+        "rationale": {},
     }
 
+    # Call Gemini for Quality
     try:
-        response = call_gemini(prompt, model=model, temperature=0.1)
-        response_json = json.loads(clean_json_response(response))
-        if "scores" not in response_json or "rationale" not in response_json:
-            raise ValueError("Missing 'scores' or 'rationale' in JSON output.")
-        result["scores"] = response_json["scores"]
-        result["rationale"] = response_json["rationale"]
+        q_response = call_gemini(quality_prompt, model=model, temperature=0.1)
+        q_json = json.loads(clean_json_response(q_response))
+        if "scores" in q_json and "rationale" in q_json:
+            result["scores"].update(q_json["scores"])
+            result["rationale"].update(q_json["rationale"])
+        else:
+            raise ValueError("Invalid Quality JSON response structure")
     except Exception as e:
-        result["error"] = str(e)
-        result["scores"] = {}
-        result["rationale"] = {}
+        result["error_quality"] = str(e)
+
+    # Call Gemini for Faithfulness
+    try:
+        f_response = call_gemini(faithfulness_prompt, model=model, temperature=0.1)
+        f_json = json.loads(clean_json_response(f_response))
+        if "scores" in f_json and "rationale" in f_json:
+            result["scores"].update(f_json["scores"])
+            result["rationale"].update(f_json["rationale"])
+        else:
+            raise ValueError("Invalid Faithfulness JSON response structure")
+    except Exception as e:
+        result["error_faithfulness"] = str(e)
+
+    # General error handling if either/both failed
+    if "error_quality" in result or "error_faithfulness" in result:
+        result["error"] = f"Quality error: {result.get('error_quality')}; Faithfulness error: {result.get('error_faithfulness')}"
 
     return result
 

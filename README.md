@@ -5,9 +5,9 @@ A simple, inspectable search-based AI agent for studying **where personalization
 ## Motivation & Project Goal
 When building a retrieval-augmented agent, you can inject the user's persona/context at different stages:
 - Only at **final answer synthesis** (`V2_synthesis_only_personalization`)
-- During **query fan-out** (the search queries themselves) (`V3_personalized_fanout`)
-- At **both** stages
-- Via a **mixed** fan-out that explicitly seeks generic, personalized, constraint, and *disconfirming* evidence (`V4_mixed_fanout`).
+- Only during **query fan-out** (the search queries themselves) (`V3_fanout_only_personalization`)
+- At **both** stages (`V4_personalized_fanout`)
+- Via a **mixed** fan-out that explicitly seeks generic, personalized, constraint, and *disconfirming* evidence (`V5_mixed_fanout`).
 
 **Research question:** does personalization help more at synthesis, at fan-out, at both, or in a mixed/disconfirming fan-out design?
 
@@ -52,10 +52,11 @@ user query (+ optional persona)
 | `V0_generic_single` | raw query as one branch | no | no |
 | `V1_generic_fanout` | 3–5 generic queries | no | no |
 | `V2_synthesis_only_personalization` | generic queries (same as V1) | no | **yes** |
-| `V3_personalized_fanout` | personalized queries | **yes** | **yes** |
-| `V4_mixed_fanout` | generic + personalized + constraint + disconfirming | **yes** | **yes** |
+| `V3_fanout_only_personalization` | personalized queries | **yes** | no |
+| `V4_personalized_fanout` | personalized queries | **yes** | **yes** |
+| `V5_mixed_fanout` | generic + personalized + constraint + disconfirming | **yes** | **yes** |
 
-For **V4 mixed fan-out**, the agent generates exactly four search queries targeting:
+For **V5 mixed fan-out**, the agent generates exactly four search queries targeting:
 1. **Generic**: neutral, broad search.
 2. **Personalized**: tailored to the user's inferred preferences.
 3. **Constraint**: targeting hard constraints (budget, jurisdiction, visa timelines, risk tolerance).
@@ -70,7 +71,7 @@ export PYTHONPATH=src
 python -m search_agent.run_agent \
     --query "What GPU should I buy for local ML experiments?" \
     --persona_id budget_highstem_phd \
-    --variant V4_mixed_fanout
+    --variant V5_mixed_fanout
 ```
 
 ---

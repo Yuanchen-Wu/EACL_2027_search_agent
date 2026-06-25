@@ -141,9 +141,11 @@ def main():
         
         contrasts = [
             ("synthesis personalization effect", "V2_synthesis_only_personalization", "V1_generic_fanout"),
-            ("marginal personalized fan-out effect given personalized synthesis", "V3_personalized_fanout", "V2_synthesis_only_personalization"),
-            ("full personalization gain over generic fan-out", "V3_personalized_fanout", "V1_generic_fanout"),
-            ("mixed/disconfirming fan-out effect", "V4_mixed_fanout", "V3_personalized_fanout")
+            ("fanout personalization effect", "V3_fanout_only_personalization", "V1_generic_fanout"),
+            ("joint personalization gain", "V4_personalized_fanout", "V1_generic_fanout"),
+            ("marginal fanout effect given personalized synthesis", "V4_personalized_fanout", "V2_synthesis_only_personalization"),
+            ("marginal synthesis effect given personalized fanout", "V4_personalized_fanout", "V3_fanout_only_personalization"),
+            ("mixed/disconfirming fan-out effect", "V5_mixed_fanout", "V4_personalized_fanout")
         ]
         
         all_task_types = set(tt for (var, tt) in by_variant_task_type.keys() if tt)
@@ -181,9 +183,11 @@ def main():
         
     contrasts = [
         ("synthesis personalization effect", "V2_synthesis_only_personalization", "V1_generic_fanout"),
-        ("marginal personalized fan-out effect given personalized synthesis", "V3_personalized_fanout", "V2_synthesis_only_personalization"),
-        ("full personalization gain over generic fan-out", "V3_personalized_fanout", "V1_generic_fanout"),
-        ("mixed/disconfirming fan-out effect", "V4_mixed_fanout", "V3_personalized_fanout")
+        ("fanout personalization effect", "V3_fanout_only_personalization", "V1_generic_fanout"),
+        ("joint personalization gain", "V4_personalized_fanout", "V1_generic_fanout"),
+        ("marginal fanout effect given personalized synthesis", "V4_personalized_fanout", "V2_synthesis_only_personalization"),
+        ("marginal synthesis effect given personalized fanout", "V4_personalized_fanout", "V3_fanout_only_personalization"),
+        ("mixed/disconfirming fan-out effect", "V5_mixed_fanout", "V4_personalized_fanout")
     ]
     
     all_domains_task_types = set((domain, tt) for (var, domain, tt) in by_variant_macro_domain_task_type.keys() if domain and tt)
